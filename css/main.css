@@ -1,1 +1,47 @@
 /* Place CSS styles here */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #f4f1ec;
+  overflow: hidden;
+  font-family: sans-serif;
+}
+
+#scene {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+.bead {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  position: absolute;
+  background: linear-gradient(145deg, #e6d8c9, #d4c3b3);
+  box-shadow: inset 2px 2px 4px rgba(255,255,255,0.5),
+              inset -2px -2px 4px rgba(0,0,0,0.1),
+              0 4px 10px rgba(0,0,0,0.1);
+  cursor: grab;
+  transition: transform 0.2s ease;
+}
+
+.bead:hover {
+  transform: scale(1.1);
+}
+
+#string {
+  position: absolute;
+  width: 70%;
+  height: 4px;
+  background: #c2b6a6;
+  top: 50%;
+  left: 15%;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
