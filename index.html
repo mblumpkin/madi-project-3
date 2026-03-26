@@ -3,8 +3,8 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Responsive Layouts</title>
-  <meta name="description" content="This site will serve as the hub for many sub responsive layouts">
+  <title>Zen Sand Jar</title>
+  <meta name="description" content="This site will be a fun zen experience playing with sand in a jar.">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <meta property="og:title" content="">
@@ -22,18 +22,15 @@
   <meta name="theme-color" content="#fafafa">
 </head>
 
+<div class="app">
+  <h1>Sand Jar</h1>
 
-<body>
+  <div class="controls" id="colors"></div>
 
-<div id="scene">
-  <div id="string"></div>
-
-  <div class="bead"></div>
-  <div class="bead"></div>
-  <div class="bead"></div>
-  <div class="bead"></div>
-  <div class="bead"></div>
-  <div class="bead"></div>
+  <div class="jar-wrap">
+    <div class="lid" id="lid"></div>
+    <canvas id="canvas" width="420" height="520"></canvas>
+  </div>
 </div>
 
   <script src="js/main.js"></script>
