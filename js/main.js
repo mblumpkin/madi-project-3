@@ -36,7 +36,7 @@ let time = 0
 function drawBackground(){
   bgCtx.clearRect(0,0,W,H)
 
-  time += 0.0005
+  time += 0.001
   const day = (Math.sin(time) + 1) / 2
 
   const skyTop = lerpColor("#87c7ff", "#0b1d3a", 1-day)
