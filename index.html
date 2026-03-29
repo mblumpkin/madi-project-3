@@ -3,8 +3,8 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Zen Sand Jar</title>
-  <meta name="description" content="This site will be a fun zen experience playing with sand in a jar.">
+  <title>Beach Sand Art</title>
+  <meta name="description" content="This site will be a fun zen experience playing with sand with a beachy mood and ocean white noise.">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <meta property="og:title" content="">
@@ -22,18 +22,25 @@
   <meta name="theme-color" content="#fafafa">
 </head>
 
-<div class="app">
-  <h1>Sand Jar</h1>
+<body>
 
-  <div class="controls" id="colors"></div>
+<div class="ui">
+  <div class="title">Painterly Sand Beach</div>
+  <div class="controls">
+    <label>Sand Color</label>
+    <input type="color" id="colorPicker" value="#f4c27a" />
 
-  <div class="jar-wrap">
-    <div class="lid" id="lid"></div>
-    <canvas id="canvas" width="420" height="520"></canvas>
+    <label>Flow</label>
+    <input type="range" id="flow" min="1" max="10" value="4" />
+
+    <button id="clear">Clear</button>
   </div>
 </div>
 
-  <script src="js/main.js"></script>
-</body>
+<canvas id="bg"></canvas>
+<canvas id="sand"></canvas>
 
+<script src="js/main.js"></script>
+
+</body>
 </html>

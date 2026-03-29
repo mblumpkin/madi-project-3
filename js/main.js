@@ -1,228 +1,333 @@
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+window.addEventListener("DOMContentLoaded", () => {
 
-const width = canvas.width;
-const height = canvas.height;
+const bg = document.getElementById('bg')
+const sand = document.getElementById('sand')
 
-const cellSize = 3;
-const cols = Math.floor(width / cellSize);
-const rows = Math.floor(height / cellSize);
+const bgCtx = bg.getContext('2d')
+const ctx = sand.getContext('2d')
 
-const grid = new Array(cols * rows).fill(null);
+let W, H
 
-let mouseDown = false;
-let mouseX = 0;
-let mouseY = 0;
+const cell = 5
+let cols, rows
+let grid
+let colorGrid
 
-let currentColor = '#f4d03f';
-
-const palette = [
-  "#e9d5a1", 
-  "#d8b48a",
-  "#cfa18d", 
-  "#b8c4a2", 
-  "#9fb7c9", 
-  "#d6a77a", 
-  "#c9b29b", 
-  "#a8a39e", 
-  "#e8cfc4", 
-  "#f1e4c8"  
-];
-
-const colorContainer = document.getElementById('colors');
-
-palette.forEach((color, i) => {
-  const div = document.createElement('div');
-  div.className = 'color' + (i === 0 ? ' active' : '');
-  div.style.background = color;
-
-  div.onclick = () => {
-    currentColor = color;
-    document.querySelectorAll('.color').forEach(c => c.classList.remove('active'));
-    div.classList.add('active');
-  };
-
-  colorContainer.appendChild(div);
-});
-
-function index(x, y) {
-  return x + y * cols;
+function resize(){
+  W = bg.width = sand.width = window.innerWidth
+  H = bg.height = sand.height = window.innerHeight
+  initSand()
 }
 
-function insideJar(x, y) {
-  const cx = width / 2;
+window.addEventListener('resize', resize)
+resize()
 
-  const top = 80;
-  const neck = 130;
-  const shoulder = 190;
-  const bottom = height - 20;
+const ocean = new Audio("./audio/oceansounds.mp3")
 
-  if (y < top || y > bottom) return false;
+ocean.loop = true
+ocean.volume = 0.35
 
-  let half;
+window.addEventListener("mousedown", () => {
+  ocean.play().catch(()=>{})
+}, { once:true })
 
-  if (y < neck) {
-    half = 70;
-  } 
-  else if (y < shoulder) {
-    const t = (y - neck) / (shoulder - neck);
-    half = 70 + Math.sin(t * Math.PI/2) * 60;
-  } 
-  else {
-    half = 130;
+let time = 0
+
+function drawBackground(){
+  bgCtx.clearRect(0,0,W,H)
+
+  time += 0.0005
+  const day = (Math.sin(time) + 1) / 2
+
+  const skyTop = lerpColor("#87c7ff", "#0b1d3a", 1-day)
+  const skyBottom = lerpColor("#ffd7a3", "#091426", 1-day)
+
+  const g = bgCtx.createLinearGradient(0,0,0,H)
+  g.addColorStop(0, skyTop)
+  g.addColorStop(1, skyBottom)
+
+  bgCtx.fillStyle = g
+  bgCtx.fillRect(0,0,W,H)
+
+  drawSun(day)
+  drawWater(day)
+  drawWaves(day)
+  drawBirds(day)
+}
+
+function drawSun(day){
+  const x = W * (0.2 + day * 0.6)
+  const y = H * (0.25 + (1-day) * 0.55)
+
+  const r = 120
+
+  const g = bgCtx.createRadialGradient(x,y,0,x,y,r)
+  g.addColorStop(0, `rgba(255,220,160,${0.6*day})`)
+  g.addColorStop(1, "rgba(255,200,120,0)")
+
+  bgCtx.fillStyle = g
+  bgCtx.beginPath()
+  bgCtx.arc(x,y,r,0,Math.PI*2)
+  bgCtx.fill()
+}
+
+function drawWater(day){
+  const horizon = H * 0.55
+
+  const g = bgCtx.createLinearGradient(0,horizon,0,H)
+  g.addColorStop(0, lerpColor("#3ec6d3", "#091a2f", 1-day))
+  g.addColorStop(1, lerpColor("#1ea0b6", "#02060f", 1-day))
+
+  bgCtx.fillStyle = g
+  bgCtx.fillRect(0,horizon,W,H)
+
+  for(let i=0;i<20;i++){
+    bgCtx.globalAlpha = 0.06
+    bgCtx.fillStyle = "white"
+
+    const y =
+      horizon +
+      i * 6 +
+      Math.sin(time * 3 + i) * 4
+
+    bgCtx.fillRect(
+      (i * 200 + time * 200) % W,
+      y,
+      220,
+      3
+    )
   }
 
-  return Math.abs(x - cx) < half;
+  bgCtx.globalAlpha = 1
 }
 
-canvas.addEventListener('mousedown', () => {
-  mouseDown = true;
-});
+function drawWaves(day){
+  const horizon = H * 0.55
 
-window.addEventListener('mouseup', () => {
-  mouseDown = false;
-});
+  for(let i=0;i<3;i++){
 
-canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  mouseX = e.clientX - rect.left;
-  mouseY = e.clientY - rect.top;
-});
+    const y =
+      horizon +
+      40 +
+      i*35 +
+      Math.sin(time*2 + i)*8
 
-function addSand() {
-  if (!mouseDown) return;
+    const amplitude = 18 + i*6
+    const wavelength = 220 - i*40
 
-  const radius = 3;
+    bgCtx.beginPath()
 
-  for (let i = 0; i < 12; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const r = Math.random() * radius;
+    for(let x=0; x<=W; x+=8){
 
-    const px = mouseX + Math.cos(angle) * r;
-    const py = mouseY + Math.sin(angle) * r;
+      const waveY =
+        y +
+        Math.sin((x/wavelength) + time*3 + i) * amplitude
 
-    const x = Math.floor(px / cellSize);
-    const y = Math.floor(py / cellSize);
-
-    if (x < 0 || x >= cols || y < 0 || y >= rows) continue;
-
-    if (!insideJar(px, py)) continue;
-
-    const iIndex = index(x,y);
-
-    if (!grid[iIndex]) {
-      grid[iIndex] = currentColor;
+      if(x === 0)
+        bgCtx.moveTo(x, waveY)
+      else
+        bgCtx.lineTo(x, waveY)
     }
+
+    bgCtx.strokeStyle = `rgba(255,255,255,${0.35 - i*0.08})`
+    bgCtx.lineWidth = 3 - i*0.7
+    bgCtx.stroke()
+
+    bgCtx.strokeStyle = "rgba(255,255,255,0.15)"
+    bgCtx.lineWidth = 6 - i
+    bgCtx.stroke()
   }
 }
 
-function update() {
-  for (let y = rows - 2; y >= 0; y--) {
-    for (let x = 0; x < cols; x++) {
-      const iIndex = index(x,y);
-      const below = index(x,y+1);
+let birds = []
 
-      if (!grid[iIndex]) continue;
+function generateBirds(){
+  birds = []
 
-      if (!grid[below] && insideJar(x*cellSize,(y+1)*cellSize)) {
-        grid[below] = grid[iIndex];
-        grid[iIndex] = null;
-        continue;
+  for(let i=0;i<8;i++){
+    birds.push({
+      x: Math.random(),
+      y: 0.12 + Math.random()*0.18,
+      speed: 0.00015 + Math.random()*0.0002,
+      size: 8 + Math.random()*6,
+      flap: Math.random()*10
+    })
+  }
+}
+
+generateBirds()
+
+function drawBirds(day){
+
+  bgCtx.strokeStyle = `rgba(0,0,0,${0.5*day})`
+  bgCtx.lineWidth = 2
+
+  birds.forEach(b=>{
+
+    b.x += b.speed
+    if(b.x > 1.2) b.x = -0.2
+
+    const x = b.x * W
+    const y =
+      (b.y + Math.sin(time*2 + b.flap)*0.01)
+      * H
+
+    const wing =
+      Math.sin(time*12 + b.flap)
+      * b.size * 0.6
+
+    bgCtx.beginPath()
+    bgCtx.moveTo(x - b.size, y)
+    bgCtx.quadraticCurveTo(x, y + wing, x + b.size, y)
+    bgCtx.stroke()
+
+  })
+}
+
+function initSand(){
+  cols = Math.floor(W / cell)
+  rows = Math.floor(H / cell)
+
+  grid = new Uint8Array(cols * rows)
+  colorGrid = new Array(cols * rows)
+}
+
+function idx(x,y){
+  return x + y * cols
+}
+
+function updateSand(){
+  for(let y = rows-2; y>=0; y--){
+    for(let x=0; x<cols; x++){
+      const i = idx(x,y)
+      if(!grid[i]) continue
+
+      const below = idx(x,y+1)
+
+      if(!grid[below]){
+        grid[below] = 1
+        colorGrid[below] = colorGrid[i]
+        grid[i] = 0
+        continue
       }
 
-      const dir = Math.random() < 0.5 ? -1 : 1;
+      const dir = Math.random() < 0.5 ? -1 : 1
+      const diag = idx(x+dir, y+1)
 
-      const diag = index(x+dir, y+1);
-
-      if (x+dir>=0 && x+dir<cols && !grid[diag] && insideJar((x+dir)*cellSize,(y+1)*cellSize)) {
-        grid[diag] = grid[iIndex];
-        grid[iIndex] = null;
+      if(x+dir >=0 && x+dir < cols && !grid[diag]){
+        grid[diag] = 1
+        colorGrid[diag] = colorGrid[i]
+        grid[i] = 0
       }
     }
   }
 }
 
-function drawJar() {
-  const cx = width/2;
+function drawSand(){
+  ctx.clearRect(0,0,W,H)
 
-  const top = 90;
-  const neck = 135;
-  const shoulder = 210;
-  const bottom = height - 20;
+  const r = cell * 0.65  
 
-  ctx.strokeStyle = "rgba(255,255,255,0.25)";
-  ctx.lineWidth = 2;
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      const i = idx(x,y)
+      if(!grid[i]) continue
 
-  ctx.beginPath();
+      ctx.fillStyle = colorGrid[i]
 
-  // left
-  ctx.moveTo(cx - 75, top);
-
-  ctx.quadraticCurveTo(
-    cx - 70, neck,
-    cx - 125, shoulder
-  );
-
-  ctx.quadraticCurveTo(
-    cx - 130, bottom,
-    cx - 130, bottom
-  );
-
-  // bottom
-  ctx.lineTo(cx + 130, bottom);
-
-  // right
-  ctx.quadraticCurveTo(
-    cx + 130, bottom,
-    cx + 125, shoulder
-  );
-
-  ctx.quadraticCurveTo(
-    cx + 70, neck,
-    cx + 75, top
-  );
-
-  ctx.stroke();
-
-  // rim
-  ctx.beginPath();
-  ctx.ellipse(cx, top, 75, 10, 0, 0, Math.PI * 2);
-  ctx.stroke();
-}
-
-function draw() {
-  ctx.clearRect(0,0,width,height);
-
-  for (let y=0;y<rows;y++){
-    for (let x=0;x<cols;x++){
-      const c = grid[index(x,y)];
-      if (!c) continue;
-
-      ctx.fillStyle = c;
-      ctx.fillRect(x*cellSize,y*cellSize,cellSize,cellSize);
+      ctx.beginPath()
+      ctx.arc(
+        x*cell + cell*0.5,
+        y*cell + cell*0.5,
+        r,
+        0,
+        Math.PI*2
+      )
+      ctx.fill()
     }
   }
-
-  drawJar();
 }
 
-function loop() {
-  addSand();
-  update();
-  draw();
-  requestAnimationFrame(loop);
+let drawing = false
+let sandColor = "#f4c27a"
+let flow = 6
+
+sand.addEventListener('mousedown', ()=> drawing = true)
+window.addEventListener('mouseup', ()=> drawing = false)
+
+sand.addEventListener('mousemove', e=>{
+  if(!drawing) return
+
+  const rect = sand.getBoundingClientRect()
+  const x = Math.floor((e.clientX - rect.left) / cell)
+  const y = Math.floor((e.clientY - rect.top) / cell)
+
+  for(let i=0;i<flow;i++){
+    const rx = x + Math.floor((Math.random()-0.5)*3)
+    const ry = y + Math.floor((Math.random()-0.5)*3)
+
+    if(rx>=0 && rx<cols && ry>=0 && ry<rows){
+      const id = idx(rx,ry)
+      grid[id] = 1
+      colorGrid[id] = varyColor(sandColor)
+    }
+  }
+})
+
+
+const picker = document.getElementById('colorPicker')
+const flowSlider = document.getElementById('flow')
+const clearBtn = document.getElementById('clear')
+
+picker.addEventListener('input', e=> sandColor = e.target.value)
+flowSlider.addEventListener('input', e=> flow = +e.target.value)
+
+clearBtn.addEventListener('click', initSand)
+
+function varyColor(hex){
+  const c = hexToRgb(hex)
+  const v = 10
+
+  c.r += rand(-v,v)
+  c.g += rand(-v,v)
+  c.b += rand(-v,v)
+
+  return `rgb(${c.r},${c.g},${c.b})`
 }
 
-loop();
+function rand(a,b){
+  return Math.floor(Math.random()*(b-a)+a)
+}
 
-const lid = document.getElementById("lid");
-
-lid.addEventListener("click", () => {
-  resetJar();
-});
-
-function resetJar(){
-  for(let i=0;i<grid.length;i++){
-    grid[i] = null;
+function hexToRgb(hex){
+  const bigint = parseInt(hex.slice(1), 16)
+  return {
+    r: (bigint >> 16) & 255,
+    g: (bigint >> 8) & 255,
+    b: bigint & 255
   }
 }
+
+function lerp(a,b,t){ return a + (b-a)*t }
+
+function lerpColor(a,b,t){
+  const ca = hexToRgb(a)
+  const cb = hexToRgb(b)
+
+  const r = Math.floor(lerp(ca.r, cb.r, t))
+  const g = Math.floor(lerp(ca.g, cb.g, t))
+  const b2 = Math.floor(lerp(ca.b, cb.b, t))
+
+  return `rgb(${r},${g},${b2})`
+}
+
+function loop(){
+  drawBackground()
+  updateSand()
+  drawSand()
+  requestAnimationFrame(loop)
+}
+
+loop()
+
+})
