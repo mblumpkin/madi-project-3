@@ -13,7 +13,7 @@
   <meta property="og:image" content="">
 
   <link rel="manifest" href="site.webmanifest">
-  <link rel="icon" href="icon.png">
+  <link rel="icon" href="./img/wave.webp">
   <!-- Place favicon.ico in the root directory -->
 
   <link rel="stylesheet" href="css/normalize.css">
@@ -24,6 +24,17 @@
 
 <body>
 
+<div id="startOverlay">
+  <div class="startBox">
+    <h2>Beach Sand Art</h2>
+    <p>
+      Click and drag to create your own sand art.<br>
+      Once you click, enjoy the sounds of ocean waves.
+    </p>
+    <button id="enterBtn">Enter</button>
+  </div>
+</div>
+
 <div class="ui">
   <div class="title">Painterly Sand Beach</div>
   <div class="controls">
@@ -31,7 +42,7 @@
     <input type="color" id="colorPicker" value="#f4c27a" />
 
     <label>Flow</label>
-    <input type="range" id="flow" min="1" max="10" value="4" />
+    <input id="flowSlider" type="range" min="1" max="20" value="6">
 
     <button id="clear">Clear</button>
   </div>

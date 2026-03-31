@@ -6,6 +6,10 @@ const sand = document.getElementById('sand')
 const bgCtx = bg.getContext('2d')
 const ctx = sand.getContext('2d')
 
+/* CRISP IMAGE RENDERING */
+bgCtx.imageSmoothingEnabled = false
+ctx.imageSmoothingEnabled = false
+
 let W, H
 
 const cell = 5
@@ -22,14 +26,84 @@ function resize(){
 window.addEventListener('resize', resize)
 resize()
 
-const ocean = new Audio("./audio/oceansounds.mp3")
+let currentColor = "#e6d3a3"
 
+const colorPicker = document.getElementById("colorPicker")
+
+if(colorPicker){
+  currentColor = colorPicker.value
+
+  colorPicker.addEventListener("input", e=>{
+    currentColor = e.target.value
+  })
+}
+
+let flow = 6
+
+const flowSlider = document.getElementById("flowSlider")
+
+if(flowSlider){
+  flow = parseInt(flowSlider.value)
+
+  flowSlider.addEventListener("input", e=>{
+    flow = parseInt(e.target.value)
+  })
+}
+
+let mouseDown = false
+let mouseX = 0
+let mouseY = 0
+
+sand.addEventListener("mousedown", e=>{
+  mouseDown = true
+  updateMouse(e)
+})
+
+window.addEventListener("mouseup", ()=>{
+  mouseDown = false
+})
+
+sand.addEventListener("mousemove", updateMouse)
+
+function updateMouse(e){
+  const rect = sand.getBoundingClientRect()
+
+  mouseX = Math.floor((e.clientX - rect.left) / cell)
+  mouseY = Math.floor((e.clientY - rect.top) / cell)
+}
+
+function spawnSand(){
+
+  const spread = Math.floor(flow / 4) + 1
+
+  for(let i=0; i < flow * 2; i++){
+
+    const x = mouseX + rand(-spread, spread)
+    const y = mouseY + rand(-spread, spread)
+
+    if(x < 0 || x >= cols || y < 0 || y >= rows) continue
+
+    const index = idx(x,y)
+
+    if(!grid[index]){
+      grid[index] = 1
+      colorGrid[index] = varyColor(currentColor)
+    }
+  }
+}
+
+const ocean = new Audio("./audio/oceansounds.mp3")
 ocean.loop = true
 ocean.volume = 0.35
 
-window.addEventListener("mousedown", () => {
+const overlay = document.getElementById("startOverlay")
+const enterBtn = document.getElementById("enterBtn")
+
+enterBtn.addEventListener("click", () => {
+  overlay.style.display = "none"
   ocean.play().catch(()=>{})
-}, { once:true })
+})
+
 
 let time = 0
 
@@ -139,6 +213,7 @@ function drawWaves(day){
   }
 }
 
+
 let birds = []
 
 function generateBirds(){
@@ -169,8 +244,7 @@ function drawBirds(day){
 
     const x = b.x * W
     const y =
-      (b.y + Math.sin(time*2 + b.flap)*0.01)
-      * H
+      (b.y + Math.sin(time*2 + b.flap)*0.01) * H
 
     const wing =
       Math.sin(time*12 + b.flap)
@@ -180,7 +254,6 @@ function drawBirds(day){
     bgCtx.moveTo(x - b.size, y)
     bgCtx.quadraticCurveTo(x, y + wing, x + b.size, y)
     bgCtx.stroke()
-
   })
 }
 
@@ -212,12 +285,15 @@ function updateSand(){
       }
 
       const dir = Math.random() < 0.5 ? -1 : 1
-      const diag = idx(x+dir, y+1)
+      const nx = x + dir
 
-      if(x+dir >=0 && x+dir < cols && !grid[diag]){
-        grid[diag] = 1
-        colorGrid[diag] = colorGrid[i]
-        grid[i] = 0
+      if(nx >= 0 && nx < cols){
+        const diag = idx(nx, y+1)
+        if(!grid[diag]){
+          grid[diag] = 1
+          colorGrid[diag] = colorGrid[i]
+          grid[i] = 0
+        }
       }
     }
   }
@@ -248,55 +324,69 @@ function drawSand(){
   }
 }
 
-let drawing = false
-let sandColor = "#f4c27a"
-let flow = 6
+const crabImg = new Image()
+crabImg.src = "./img/crab.png"
 
-sand.addEventListener('mousedown', ()=> drawing = true)
-window.addEventListener('mouseup', ()=> drawing = false)
+let crab = {
+  x: 200,
+  dir: 1,
+  speed: 0.6,
+  bob: 0
+}
 
-sand.addEventListener('mousemove', e=>{
-  if(!drawing) return
+function updateCrab(){
+  crab.bob += 0.18
 
-  const rect = sand.getBoundingClientRect()
-  const x = Math.floor((e.clientX - rect.left) / cell)
-  const y = Math.floor((e.clientY - rect.top) / cell)
+  if(!crabImg.complete) return
 
-  for(let i=0;i<flow;i++){
-    const rx = x + Math.floor((Math.random()-0.5)*3)
-    const ry = y + Math.floor((Math.random()-0.5)*3)
+  const width = crabImg.width * 0.07
 
-    if(rx>=0 && rx<cols && ry>=0 && ry<rows){
-      const id = idx(rx,ry)
-      grid[id] = 1
-      colorGrid[id] = varyColor(sandColor)
-    }
-  }
-})
+  crab.x += crab.dir * crab.speed
 
+  if(crab.x <= 0) crab.dir = 1
+  if(crab.x >= W - width) crab.dir = -1
+}
 
-const picker = document.getElementById('colorPicker')
-const flowSlider = document.getElementById('flow')
-const clearBtn = document.getElementById('clear')
+function drawCrab(){
 
-picker.addEventListener('input', e=> sandColor = e.target.value)
-flowSlider.addEventListener('input', e=> flow = +e.target.value)
+  if(!crabImg.complete) return
 
-clearBtn.addEventListener('click', initSand)
+  const scale = 0.07
+  const width = crabImg.width * scale
+  const height = crabImg.height * scale
+
+  const y = H - height - 2
+  const bob = Math.sin(crab.bob) * 2
+
+  bgCtx.save()
+
+  bgCtx.translate(crab.x + width/2, y + height/2 + bob)
+  bgCtx.scale(crab.dir, 1)
+
+  bgCtx.drawImage(
+    crabImg,
+    -width/2,
+    -height/2,
+    width,
+    height
+  )
+
+  bgCtx.restore()
+}
 
 function varyColor(hex){
   const c = hexToRgb(hex)
-  const v = 10
+  const v = 12
 
-  c.r += rand(-v,v)
-  c.g += rand(-v,v)
-  c.b += rand(-v,v)
+  const r = Math.max(0, Math.min(255, c.r + rand(-v,v)))
+  const g = Math.max(0, Math.min(255, c.g + rand(-v,v)))
+  const b = Math.max(0, Math.min(255, c.b + rand(-v,v)))
 
-  return `rgb(${c.r},${c.g},${c.b})`
+  return `rgb(${r},${g},${b})`
 }
 
 function rand(a,b){
-  return Math.floor(Math.random()*(b-a)+a)
+  return Math.floor(Math.random()*(b-a+1)+a)
 }
 
 function hexToRgb(hex){
@@ -322,9 +412,19 @@ function lerpColor(a,b,t){
 }
 
 function loop(){
+
+  if(mouseDown){
+    spawnSand()
+  }
+
   drawBackground()
+
+  updateCrab()
+  drawCrab()
+
   updateSand()
   drawSand()
+
   requestAnimationFrame(loop)
 }
 
